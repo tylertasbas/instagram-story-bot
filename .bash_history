@@ -39,3 +39,32 @@ htop
 free -h
 pip3 install googlemaps
 g
+sudo apt update && sudo apt upgrade -y
+sudo apt install git curl wget unzip -y
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt install -y nodejs
+sudo apt install -y libxss1 libappindicator1 libindicator7 libnss3 libatk-bridge2.0-0 libgtk-3-0 libx11-xcb1
+git init
+git add .
+git commit -m "initial commit"
+git remote add origin https://github.com/kullaniciadi/instagram-story-bot.git
+git push -u origin master
+mkdir src
+mv storyBot.ts src/storyBot.ts
+mv scheduler.ts src/scheduler.ts
+git init
+git add .
+git commit -m "first commit"
+git remote add origin https://github.com/kullaniciadi/instagram-story-bot.git
+git init
+git add .
+git commit -m "first commit"
+git remote add origin https://github.com/tylertasbas/instagram-story-bot.git
+git push -u origin master
+git init
+git add .
+git commit -m "first commit"
+git remote add origin https://github.com/tylertasbas/instagram-story-bot.git
+git push -u origin master
+exist
+exit
