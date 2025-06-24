@@ -1,0 +1,21 @@
+{
+  "name": "instagram-story-bot",
+  "version": "1.0.0",
+  "main": "src/storyBot.ts",
+  "type": "module",
+  "scripts": {
+    "start": "ts-node src/storyBot.ts",
+    "schedule": "ts-node src/scheduler.ts"
+  },
+  "dependencies": {
+    "puppeteer": "^22.0.0",
+    "fs-extra": "^11.1.1",
+    "dotenv": "^16.3.1",
+    "node-fetch": "^3.3.2"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5",
+    "ts-node": "^10.9.2",
+    "@types/node": "^20.11.30"
+  }
+}
