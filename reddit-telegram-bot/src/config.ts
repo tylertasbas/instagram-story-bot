@@ -10,6 +10,8 @@ function required(name: string): string {
 
 export const config = {
   telegramToken: required('TELEGRAM_BOT_TOKEN'),
+  redditClientId: required('REDDIT_CLIENT_ID'),
+  redditClientSecret: required('REDDIT_CLIENT_SECRET'),
   minComments: Number(process.env.MIN_COMMENTS ?? 10),
   scanIntervalMinutes: Number(process.env.SCAN_INTERVAL_MINUTES ?? 15),
   maxPostsPerScan: Number(process.env.MAX_POSTS_PER_SCAN ?? 5),

@@ -6,7 +6,9 @@ Türkçeye çevirir, Telegram'daki ilgili sohbete gönderir.
 
 ## Nasıl çalışır
 
-- Reddit'in herkese açık `.json` uçları kullanılır (API key gerekmez).
+- Reddit'in resmi OAuth API'si (`client_credentials` / app-only akış) kullanılır. Anonim
+  `.json` uçları birçok VPS/hosting sağlayıcısının IP'sini 403 ile engelliyor, OAuth bunu
+  büyük ölçüde aşar ve daha yüksek rate limit sağlar.
 - Çeviri için ücretsiz, key gerektirmeyen Google Translate uç noktası kullanılır.
 - Subreddit takibi Telegram komutlarıyla yönetilir, sohbet başına ayrı liste tutulur.
 - Bir subreddit ilk eklendiğinde mevcut başlıklar "baseline" olarak işaretlenir,
@@ -25,9 +27,19 @@ cp .env.example .env
 
 1. Telegram'da **@BotFather**'a gidip `/newbot` ile bot oluşturun, verdiği tokenı
    `TELEGRAM_BOT_TOKEN` alanına yapıştırın.
-2. İsterseniz `MIN_COMMENTS`, `SCAN_INTERVAL_MINUTES`, `MAX_POSTS_PER_SCAN`,
+2. Reddit için bir OAuth uygulaması oluşturun:
+   1. https://www.reddit.com/prefs/apps adresine gidin (Reddit hesabınızla giriş yapın).
+   2. Sayfanın altındaki **"create app"** (veya "create another app") butonuna tıklayın.
+   3. Bir isim girin (örn. `reddit-telegram-bot`), tip olarak **"script"** seçin.
+   4. "redirect uri" alanına zorunlu olduğu için `http://localhost` yazabilirsiniz (kullanılmıyor).
+   5. "create app" ile onaylayın.
+   6. Uygulama adının hemen altında görünen kısa kod **client_id**'niz,
+      "secret" alanındaki değer **client_secret**'ınızdır.
+   7. Bu iki değeri `.env` dosyasındaki `REDDIT_CLIENT_ID` ve `REDDIT_CLIENT_SECRET`
+      alanlarına yapıştırın.
+3. İsterseniz `MIN_COMMENTS`, `SCAN_INTERVAL_MINUTES`, `MAX_POSTS_PER_SCAN`,
    `TOP_COMMENTS_COUNT` değerlerini değiştirin.
-3. `REDDIT_USER_AGENT` alanını kendi kullanıcı adınızla güncellemeniz önerilir
+4. `REDDIT_USER_AGENT` alanını kendi kullanıcı adınızla güncellemeniz önerilir
    (Reddit, ortak/boş User-Agent'ları sınırlayabilir).
 
 Çalıştırın:

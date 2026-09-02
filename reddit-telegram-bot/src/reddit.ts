@@ -32,19 +32,55 @@ interface RawCommentData {
   score: number;
 }
 
-async function redditFetch(url: string): Promise<any> {
-  const res = await fetch(url, {
-    headers: { 'User-Agent': config.redditUserAgent },
+let cachedToken: { token: string; expiresAt: number } | null = null;
+
+async function getAccessToken(): Promise<string> {
+  if (cachedToken && cachedToken.expiresAt > Date.now() + 30_000) {
+    return cachedToken.token;
+  }
+
+  const basicAuth = Buffer.from(`${config.redditClientId}:${config.redditClientSecret}`).toString('base64');
+  const res = await fetch('https://www.reddit.com/api/v1/access_token', {
+    method: 'POST',
+    headers: {
+      Authorization: `Basic ${basicAuth}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'User-Agent': config.redditUserAgent,
+    },
+    body: 'grant_type=client_credentials',
   });
+
   if (!res.ok) {
-    throw new Error(`Reddit isteği başarısız (${res.status}): ${url}`);
+    throw new Error(`Reddit OAuth token alınamadı (${res.status}): ${await res.text()}`);
+  }
+
+  const json = (await res.json()) as { access_token: string; expires_in: number };
+  cachedToken = { token: json.access_token, expiresAt: Date.now() + json.expires_in * 1000 };
+  return cachedToken.token;
+}
+
+async function redditFetch(path: string): Promise<any> {
+  const token = await getAccessToken();
+  const res = await fetch(`https://oauth.reddit.com${path}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'User-Agent': config.redditUserAgent,
+    },
+  });
+
+  if (res.status === 401) {
+    cachedToken = null;
+    throw new Error(`Reddit isteği yetkisiz (401), token yenilenecek: ${path}`);
+  }
+  if (!res.ok) {
+    throw new Error(`Reddit isteği başarısız (${res.status}): ${path}`);
   }
   return res.json();
 }
 
 export async function fetchNewPosts(subreddit: string): Promise<RedditPost[]> {
   const json = (await redditFetch(
-    `https://www.reddit.com/r/${encodeURIComponent(subreddit)}/new.json?limit=25&raw_json=1`
+    `/r/${encodeURIComponent(subreddit)}/new?limit=25&raw_json=1`
   )) as RedditListing<RawPostData>;
 
   return json.data.children
@@ -68,7 +104,7 @@ export async function fetchTopComments(
   count: number
 ): Promise<RedditComment[]> {
   const json = (await redditFetch(
-    `https://www.reddit.com/r/${encodeURIComponent(subreddit)}/comments/${postId}.json?limit=${count}&sort=top&raw_json=1`
+    `/r/${encodeURIComponent(subreddit)}/comments/${postId}?limit=${count}&sort=top&raw_json=1`
   )) as RedditListing<RawPostData | RawCommentData>[];
 
   const commentListing = json[1] as RedditListing<RawCommentData>;
