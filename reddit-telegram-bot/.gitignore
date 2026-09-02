@@ -1,0 +1,5 @@
+node_modules/
+dist/
+.env
+data/subscriptions.json
+*.log

@@ -1,0 +1,25 @@
+{
+  "name": "reddit-telegram-bot",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Reddit'te takip edilen subreddit'lerdeki en az N yorum alan başlıkları Türkçeye çevirip Telegram'a gönderen bot",
+  "main": "src/index.ts",
+  "scripts": {
+    "start": "ts-node src/index.ts",
+    "dev": "ts-node-dev --respawn src/index.ts",
+    "build": "tsc",
+    "start:build": "node dist/index.js"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "node-cron": "^3.0.3",
+    "telegraf": "^4.16.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.30",
+    "@types/node-cron": "^3.0.11",
+    "ts-node": "^10.9.2",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.4.5"
+  }
+}
