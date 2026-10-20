@@ -16,7 +16,8 @@ W, H, FPS, DUR = 1080, 1920, 30, 43.0
 WHITE = (1, 1, 1)
 GREY = (0.55, 0.55, 0.55)
 DARK = (0.22, 0.22, 0.22)
-ORANGE = (0.97, 0.65, 0.14)
+ORANGE = (1.0, 0.55, 0.30)
+BG = (0.018, 0.022, 0.04)
 YELLOW = (1.0, 0.85, 0.32)
 RED = (0.90, 0.30, 0.24)
 BLUE = (0.33, 0.55, 0.95)
@@ -90,7 +91,7 @@ def glow_stroke(ctx, path, c, width, a, glow=1.0):
 
 
 def font(ctx, size, weight="r"):
-    fam = {"t": "Inter Thin", "l": "Inter Light", "r": "Inter", "b": "Inter"}[weight]
+    fam = {"t": "Inter Thin", "l": "Inter Light", "r": "Inter Display", "b": "Inter Display"}[weight]
     ctx.select_font_face(fam, cairo.FONT_SLANT_NORMAL,
                          cairo.FONT_WEIGHT_BOLD if weight == "b" else cairo.FONT_WEIGHT_NORMAL)
     ctx.set_font_size(size)
@@ -173,53 +174,116 @@ def draw_captions(ctx, t):
                 a = eo(seg(local, i * gap, i * gap + 0.28)) * out
                 dy = 10 * (1 - a)
                 font(ctx, size, "b" if st != "n" else "r")
-                c = {"n": (0.62, 0.62, 0.62), "b": WHITE, "o": ORANGE}[st]
+                c = {"n": (0.66, 0.67, 0.70), "b": WHITE, "o": ORANGE}[st]
                 ctx.move_to(x, y + dy)
                 rgba(ctx, c, a)
                 ctx.show_text(w)
+                if st == "b":
+                    u = eo(seg(local, i * gap + 0.15, i * gap + 0.5)) * out
+                    rgba(ctx, ORANGE, u * 0.85)
+                    ctx.rectangle(x, y + 12, ww * u, 3)
+                    ctx.fill()
                 x += ww + space
         del sw
 
 
-def draw_dots(ctx, active, a, final=False):
+def draw_dots(ctx, active, a, final=False, frac=1.0):
+    """Üstte 4 parçalı ilerleme çubuğu (aktif parça frac kadar dolu)."""
     if a <= 0:
         return
-    xs = [W / 2 + (i - 1.5) * 34 for i in range(4)]
-    for i, x in enumerate(xs):
+    x0, x1, y, h, gap = 120, 960, 290, 5, 10
+    sw = (x1 - x0 - 3 * gap) / 4
+
+    def bar(x, w):
+        if w <= 0:
+            return
+        r = h / 2
+        ctx.new_sub_path()
+        ctx.arc(x + r, y + r, r, math.pi / 2, 3 * math.pi / 2)
+        ctx.arc(x + max(r, w - r), y + r, r, -math.pi / 2, math.pi / 2)
+        ctx.close_path()
+        ctx.fill()
+
+    for i in range(4):
+        x = x0 + i * (sw + gap)
+        rgba(ctx, WHITE, a * 0.16)
+        bar(x, sw)
         if final:
             rgba(ctx, ORANGE, a)
-            ctx.arc(x, 330, 6.5, 0, 2 * math.pi)
-            ctx.fill()
-        elif i < active:
-            rgba(ctx, WHITE, a)
-            ctx.arc(x, 330, 6.5, 0, 2 * math.pi)
-            ctx.fill()
-        else:
-            rgba(ctx, GREY, a * 0.7)
-            ctx.set_line_width(1.6)
-            ctx.arc(x, 330, 6, 0, 2 * math.pi)
-            ctx.stroke()
+            bar(x, sw)
+        elif i < active - 1:
+            rgba(ctx, WHITE, a * 0.9)
+            bar(x, sw)
+        elif i == active - 1:
+            rgba(ctx, WHITE, a * 0.9)
+            bar(x, sw * clamp(frac))
+
+
+def stage_label(ctx, n, lab, a):
+    """Sol üstte '01  KESİT' biçiminde bölüm etiketi."""
+    if a <= 0:
+        return
+    font(ctx, 24, "b")
+    ctx.move_to(120, 345)
+    rgba(ctx, ORANGE, a)
+    ctx.show_text(f"{n:02d}")
+    x = 172
+    font(ctx, 22, "r")
+    rgba(ctx, (0.7, 0.72, 0.76), a)
+    for ch in lab.upper():
+        ctx.move_to(x, 345)
+        ctx.show_text(ch)
+        x += ctx.text_extents(ch).x_advance + 3
+
+
+def paint_bg(ctx):
+    ctx.new_path()
+    ctx.set_source_rgb(*BG)
+    ctx.paint()
+    g = cairo.RadialGradient(W / 2, 900, 50, W / 2, 900, 1000)
+    g.add_color_stop_rgba(0, 0.07, 0.08, 0.12, 0.9)
+    g.add_color_stop_rgba(1, 0.07, 0.08, 0.12, 0)
+    ctx.set_source(g)
+    ctx.paint()
+
+
+def draw_frame(ctx, a):
+    """Çizim alanının köşelerinde vizör köşelikleri."""
+    if a <= 0:
+        return
+    x0, y0, x1, y1, L = 80, 470, 1000, 1335, 34
+    ctx.set_line_width(2)
+    for cx, cy, sx, sy in ((x0, y0, 1, 1), (x1, y0, -1, 1), (x0, y1, 1, -1), (x1, y1, -1, -1)):
+        ctx.move_to(cx + sx * L, cy)
+        ctx.line_to(cx, cy)
+        ctx.line_to(cx, cy + sy * L)
+    rgba(ctx, WHITE, 0.32 * a)
+    ctx.stroke()
+
+
+def draw_watermark(ctx):
+    rgba(ctx, ORANGE, 0.9)
+    ctx.arc(126, 1591, 5, 0, 2 * math.pi)
+    ctx.fill()
+    font(ctx, 24, "r")
+    ctx.move_to(142, 1600)
+    rgba(ctx, (0.45, 0.46, 0.5), 1)
+    ctx.show_text(WATERMARK)
 
 
 def draw_grid(ctx, a):
     if a <= 0:
         return
     step = 54
-    ctx.set_line_width(1)
+    rgba(ctx, WHITE, 0.16 * a)
     for i in range(0, W // step + 1):
-        x = i * step + 0.5
-        ctx.move_to(x, 0)
-        ctx.line_to(x, H)
-    for j in range(0, H // step + 1):
-        y = j * step + 12.5
-        ctx.move_to(0, y)
-        ctx.line_to(W, y)
-    rgba(ctx, WHITE, 0.055 * a)
-    ctx.stroke()
+        for j in range(0, H // step + 1):
+            ctx.rectangle(i * step + 26, j * step + 11, 2, 2)
+    ctx.fill()
     # kenarları karart (vinyet)
     g = cairo.RadialGradient(W / 2, 960, 300, W / 2, 960, 1150)
     g.add_color_stop_rgba(0, 0, 0, 0, 0)
-    g.add_color_stop_rgba(1, 0, 0, 0, 0.85 * a)
+    g.add_color_stop_rgba(1, BG[0], BG[1], BG[2], 0.85 * a)
     ctx.set_source(g)
     ctx.paint()
 
@@ -730,7 +794,7 @@ def step_header(ctx, t, a, step):
     labels = ["is", "küp", "mürekkep"]
     for i, x in enumerate(xs):
         done = i <= step
-        rgba(ctx, (0, 0, 0), a)
+        rgba(ctx, BG, a)
         ctx.arc(x, y, 24, 0, 2 * math.pi)
         ctx.fill()
         ctx.set_line_width(2)
@@ -761,7 +825,7 @@ def ink_step1(ctx, t, a):
     box()
     ctx.stroke()
     # giriş açıklığı (sol)
-    rgba(ctx, (0, 0, 0), a)
+    rgba(ctx, BG, a)
     ctx.rectangle(x0 - 4, 1000, 8, 70)
     ctx.fill()
     # gelen akış
@@ -1149,7 +1213,7 @@ def scene_cta(ctx, t, a):
     ctx.close_path()
     rgba(ctx, WHITE, a)
     ctx.fill_preserve()
-    rgba(ctx, (0, 0, 0), a)
+    rgba(ctx, BG, a)
     ctx.set_line_width(1.5)
     ctx.stroke()
     if tap > 0:
@@ -1162,8 +1226,7 @@ def scene_cta(ctx, t, a):
 
 # ----------------------------------------------------------------- kompozisyon
 def render_frame(ctx, t):
-    ctx.set_source_rgb(0, 0, 0)
-    ctx.paint()
+    paint_bg(ctx)
     a3d = window(t, 4.0, 20.7, 0.45) + window(t, 34.6, 39.6, 0.45)
     draw_grid(ctx, window(t, 3.9, 21, 0.6) + window(t, 34.4, 39.8, 0.6))
     scene_hook(ctx, t, 1 - eio(seg(t, 4.0, 4.4)))
@@ -1180,14 +1243,15 @@ def render_frame(ctx, t):
         for s0, s1, n, lab in stages:
             if s0 <= t < s1:
                 da = eo(seg(t, 4.0, 4.4))
-                draw_dots(ctx, n, da)
+                draw_dots(ctx, n, da, frac=seg(t, s0, s1))
                 la = window(t, s0, s1, 0.3) if n > 1 else eo(seg(t, 4.0, 4.4)) * (1 - eio(seg(t, 9.7, 10.0)))
-                text_c(ctx, lab, W / 2, 400, 26, (0.7, 0.7, 0.7), la)
+                stage_label(ctx, n, lab, la)
     else:
         draw_dots(ctx, 4, 1, final=True)
 
+    draw_frame(ctx, eo(seg(t, 4.0, 4.6)) * (1 - eio(seg(t, 39.0, 39.5))))
     draw_captions(ctx, t)
-    text_c(ctx, WATERMARK, W / 2, 1590, 24, (0.38, 0.38, 0.38), 1)
+    draw_watermark(ctx)
 
 
 def main():

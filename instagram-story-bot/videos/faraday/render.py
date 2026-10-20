@@ -499,9 +499,7 @@ def scene_cta(ctx, t, a):
 
 
 def render_frame(ctx, t):
-    ctx.new_path()
-    ctx.set_source_rgb(0, 0, 0)
-    ctx.paint()
+    base.paint_bg(ctx)
     draw_grid(ctx, 0.7 * (window(t, 3.9, 29, 0.6) + window(t, 34.4, 39.8, 0.6)))
     scene_hook(ctx, t, 1 - eio(seg(t, 4.0, 4.4)))
     scene_plane(ctx, t, window(t, 4.0, 28.9, 0.45) + window(t, 34.6, 39.3, 0.45))
@@ -512,13 +510,14 @@ def render_frame(ctx, t):
                   (19.0, 28.7, 3, "akım yolu"), (28.7, 34.7, 4, "faraday kafesi")]
         for s0, s1, n, lab in stages:
             if s0 <= t < s1:
-                draw_dots(ctx, n, eo(seg(t, 4.0, 4.4)))
+                draw_dots(ctx, n, eo(seg(t, 4.0, 4.4)), frac=seg(t, s0, s1))
                 la = window(t, s0, s1, 0.3) if n > 1 else eo(seg(t, 4.0, 4.4)) * (1 - eio(seg(t, 10.7, 11.0)))
-                text_c(ctx, lab, W / 2, 400, 26, (0.7, 0.7, 0.7), la)
+                base.stage_label(ctx, n, lab, la)
     else:
         draw_dots(ctx, 4, 1, final=True)
+    base.draw_frame(ctx, eo(seg(t, 4.0, 4.6)) * (1 - eio(seg(t, 38.8, 39.3))))
     base.draw_captions(ctx, t)
-    text_c(ctx, WATERMARK, W / 2, 1590, 24, (0.38, 0.38, 0.38), 1)
+    base.draw_watermark(ctx)
 
 
 def main():
