@@ -1,0 +1,609 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hayatta Kalma Yanılgısı</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Architects+Daughter&family=EB+Garamond:ital,wght@0,500;0,600;1,500&family=Special+Elite&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #F4EEDD;
+    --ink: #111111;
+    --pencil: #555555;
+    --red: #D64045;
+    --serif: "EB Garamond", Georgia, "Times New Roman", serif;
+    --type: "Special Elite", "Courier New", Courier, monospace;
+    --hand: "Architects Daughter", "Comic Sans MS", cursive;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; height: 100%; overflow: hidden;
+    background: #1c1a16;
+  }
+  #stage {
+    position: absolute; left: 50%; top: 50%;
+    width: 1080px; height: 1920px;
+    transform-origin: 0 0;
+    background: var(--paper);
+    overflow: hidden;
+    box-shadow: 0 0 80px rgba(0,0,0,.5);
+  }
+  #stage svg { position: absolute; inset: 0; width: 1080px; height: 1920px; }
+  #cap {
+    position: absolute; left: 90px; width: 900px; top: 1470px;
+    font-family: var(--type); font-size: 47px; line-height: 1.38;
+    color: var(--ink); text-align: center;
+    letter-spacing: .5px;
+  }
+  #cap .r { color: var(--red); }
+  #cap .caret { color: var(--red); }
+  #replay {
+    position: fixed; top: 14px; left: 50%; transform: translateX(-50%);
+    z-index: 10;
+    font-family: var(--serif); font-size: 17px; font-weight: 600;
+    letter-spacing: .5px;
+    color: var(--ink); background: var(--paper);
+    border: 1.5px solid var(--ink); border-radius: 999px;
+    padding: 8px 20px; cursor: pointer;
+    box-shadow: 2px 3px 0 rgba(0,0,0,.35);
+  }
+  #replay:hover { background: #fff8e6; }
+  #replay:active { transform: translateX(-50%) translateY(2px); box-shadow: 1px 1px 0 rgba(0,0,0,.35); }
+  body.capture #replay { display: none; }
+  body.capture #stage { box-shadow: none; }
+
+  .ink   { fill: none; stroke: var(--ink); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+  .thin  { stroke-width: 1.8; }
+  .pen   { fill: none; stroke: var(--pencil); stroke-width: 1.8; stroke-linecap: round; }
+  .dash  { stroke-dasharray: 10 8; }
+  .redl  { fill: none; stroke: var(--red); stroke-width: 5; stroke-linecap: round; }
+  .hand  { font-family: var(--hand); fill: var(--pencil); }
+  .type  { font-family: var(--type); fill: var(--ink); }
+  .serif { font-family: var(--serif); fill: var(--ink); }
+</style>
+</head>
+<body>
+<button id="replay" type="button">↻ Yeniden Oynat</button>
+
+<div id="stage">
+<svg viewBox="0 0 1080 1920" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- kağıt dokusu -->
+    <filter id="grain" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="3" seed="4"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.36  0 0 0 0 0.29  0 0 0 0 0.17  0 0 0 -1.6 1.05"/>
+    </filter>
+    <filter id="stain" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.0035 0.005" numOctaves="3" seed="11"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.55  0 0 0 0 0.43  0 0 0 0 0.22  0 0 0 1.4 -0.55"/>
+    </filter>
+    <!-- elle çizilmiş titreklik -->
+    <filter id="rough" x="-5%" y="-5%" width="110%" height="110%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="2" seed="7" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="3.2" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+    <radialGradient id="vig" cx="50%" cy="48%" r="75%">
+      <stop offset="60%" stop-color="#8a7448" stop-opacity="0"/>
+      <stop offset="100%" stop-color="#8a7448" stop-opacity=".38"/>
+    </radialGradient>
+    <pattern id="gridS" width="30" height="30" patternUnits="userSpaceOnUse">
+      <path d="M30 0H0V30" fill="none" stroke="#111" stroke-opacity=".045" stroke-width="1"/>
+    </pattern>
+    <pattern id="gridL" width="150" height="150" patternUnits="userSpaceOnUse" x="15" y="10">
+      <path d="M150 0H0V150" fill="none" stroke="#111" stroke-opacity=".08" stroke-width="1.2"/>
+    </pattern>
+    <pattern id="hatch" width="14" height="14" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+      <line x1="0" y1="0" x2="0" y2="14" stroke="#555" stroke-width="2" stroke-opacity=".35"/>
+    </pattern>
+    <pattern id="hatchRed" width="12" height="12" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)">
+      <line x1="0" y1="0" x2="0" y2="12" stroke="#D64045" stroke-width="2.5" stroke-opacity=".45"/>
+    </pattern>
+    <marker id="arr" viewBox="0 0 12 12" refX="10" refY="6" markerWidth="14" markerHeight="14" orient="auto-start-reverse">
+      <path d="M1 1 L11 6 L1 11" fill="none" stroke="#555" stroke-width="1.6"/>
+    </marker>
+    <!-- küçük uçak sembolü (200x200) -->
+    <symbol id="mini" viewBox="0 0 200 200" overflow="visible">
+      <path d="M100,20 C110,22 112,40 112,60 L112,150 C110,170 104,185 100,190 C96,185 90,170 88,150 L88,60 C88,40 90,22 100,20Z"/>
+      <path d="M88,75 L16,96 L16,106 L88,112Z M112,75 L184,96 L184,106 L112,112Z"/>
+      <path d="M90,162 L58,170 L58,178 L90,181Z M110,162 L142,170 L142,178 L110,181Z"/>
+      <path d="M44,80 v18 M66,74 v18 M134,74 v18 M156,80 v18"/>
+    </symbol>
+  </defs>
+
+  <!-- KAĞIT -->
+  <rect width="1080" height="1920" fill="#F4EEDD"/>
+  <rect width="1080" height="1920" filter="url(#stain)" opacity=".5"/>
+  <rect width="1080" height="1920" fill="url(#gridS)"/>
+  <rect width="1080" height="1920" fill="url(#gridL)"/>
+  <!-- pergel izleri -->
+  <g fill="none" stroke="#555" stroke-opacity=".13" stroke-width="1.3">
+    <circle cx="540" cy="860" r="455" stroke-dasharray="4 10"/>
+    <circle cx="540" cy="860" r="300"/>
+    <circle cx="540" cy="860" r="180" stroke-dasharray="2 8"/>
+    <path d="M540 360 V1360 M40 860 H1040" stroke-dasharray="14 6 2 6"/>
+    <path d="M140 1440 A 520 520 0 0 1 940 1440"/>
+    <circle cx="905" cy="300" r="70" stroke-dasharray="3 6"/>
+    <path d="M905 220 V380 M825 300 H985"/>
+    <circle cx="160" cy="1385" r="48"/>
+  </g>
+  <rect width="1080" height="1920" filter="url(#grain)" opacity=".55"/>
+  <rect width="1080" height="1920" fill="url(#vig)"/>
+
+  <!-- İLERLEME: I – II – III – IV -->
+  <g id="progress" transform="translate(0,150)">
+    <g class="pen" stroke-opacity=".6">
+      <line x1="300" y1="0" x2="440" y2="0"/>
+      <line x1="470" y1="0" x2="610" y2="0"/>
+      <line x1="640" y1="0" x2="780" y2="0"/>
+    </g>
+    <g id="numerals" font-family="EB Garamond, Georgia, serif" font-size="46" font-weight="600" text-anchor="middle"></g>
+    <text id="stageName" x="540" y="78" text-anchor="middle" class="type" font-size="22" letter-spacing="6" style="fill:#555"></text>
+  </g>
+
+  <!-- ÜST NOTLAR -->
+  <g id="titleNote" class="type" font-size="24" letter-spacing="3" fill="#555">
+    <text x="540" y="300" text-anchor="middle" id="tn1"></text>
+  </g>
+  <g id="planNote" opacity="0">
+    <text x="540" y="320" text-anchor="middle" class="hand" font-size="40">Plan: delik çoksa → zırh ekle!</text>
+    <path class="pen" data-d="8.6,0.7" d="M300 338 Q540 350 780 334"/>
+  </g>
+  <g id="wald" opacity="0">
+    <text x="540" y="318" text-anchor="middle" class="serif" font-size="64" font-style="italic" font-weight="500">Abraham Wald</text>
+    <path class="redl" style="stroke-width:3" data-d="16.6,0.6" d="M335 338 C450 350 640 330 745 340"/>
+    <text x="540" y="380" text-anchor="middle" class="type" font-size="22" letter-spacing="2" style="fill:#555">MATEMATİKÇİ · İSTATİSTİK ARAŞTIRMA GRUBU · 1943</text>
+  </g>
+
+  <!-- UÇAK -->
+  <g id="planeWrap">
+    <!-- ölçü çizgileri -->
+    <g id="dims" opacity="0">
+      <line class="pen" x1="112" y1="420" x2="968" y2="420" marker-start="url(#arr)" marker-end="url(#arr)" data-d="2.4,1"/>
+      <path class="pen" d="M110 405 V445 M970 405 V445" data-d="2.3,0.4"/>
+      <rect x="480" y="404" width="120" height="32" fill="#F4EEDD"/>
+      <text x="540" y="429" text-anchor="middle" class="hand" font-size="28">31,6 m</text>
+      <line class="pen" x1="62" y1="470" x2="62" y2="1250" marker-start="url(#arr)" marker-end="url(#arr)" data-d="2.6,1"/>
+      <rect x="44" y="840" width="36" height="96" fill="#F4EEDD"/>
+      <text transform="translate(72 888) rotate(-90)" text-anchor="middle" class="hand" font-size="28">22,6 m</text>
+    </g>
+
+    <g id="plane" filter="url(#rough)">
+      <!-- gövde -->
+      <path class="ink" data-d="0.2,1.4" d="M540,468 C568,470 586,505 590,560 L592,1010 C590,1110 568,1200 550,1252 L530,1252 C512,1200 490,1110 488,1010 L490,560 C494,505 512,470 540,468 Z"/>
+      <!-- burun camı + kokpit -->
+      <path class="ink thin" data-d="1.0,0.5" d="M512,522 Q540,488 568,522 M520,505 L540,535 L560,505 M540,470 V535"/>
+      <path class="ink thin" data-d="1.2,0.5" d="M516,572 L564,572 L559,606 L521,606 Z M540,572 V606"/>
+      <!-- taretler -->
+      <circle class="ink thin" data-d="1.5,0.4" cx="540" cy="655" r="17"/>
+      <circle class="ink thin" data-d="1.6,0.4" cx="540" cy="935" r="14"/>
+      <!-- gövde kesit çizgileri -->
+      <path class="ink thin" data-d="1.7,0.6" d="M491,700 H589 M491,862 H591 M490,1010 H590 M496,1110 H584" stroke-dasharray="1"/>
+      <!-- kanatlar -->
+      <path class="ink" data-d="0.5,1.2" d="M490,700 L118,782 C98,786 96,818 114,822 L490,846"/>
+      <path class="ink" data-d="0.5,1.2" d="M590,700 L962,782 C982,786 984,818 966,822 L590,846"/>
+      <!-- kanat sinirleri, kanatçıklar -->
+      <path class="pen dash" data-d="1.9,0.8" d="M170,771 L172,826 M320,738 L322,836 M440,712 L441,843 M910,771 L908,826 M760,738 L758,836 M640,712 L639,843"/>
+      <path class="ink thin" data-d="2.0,0.6" d="M128,808 L300,820 M952,808 L780,820"/>
+      <!-- motorlar -->
+      <g data-group="engines">
+        <path class="ink" data-d="1.1,0.7" d="M240,712 Q260,700 280,712 L282,812 Q260,826 238,812 Z"/>
+        <path class="ink" data-d="1.2,0.7" d="M360,686 Q380,674 400,686 L402,800 Q380,814 358,800 Z"/>
+        <path class="ink" data-d="1.2,0.7" d="M680,686 Q700,674 720,686 L722,800 Q700,814 678,800 Z"/>
+        <path class="ink" data-d="1.1,0.7" d="M800,712 Q820,700 840,712 L842,812 Q820,826 798,812 Z"/>
+        <!-- pervaneler -->
+        <path class="ink thin" data-d="1.6,0.5" d="M205,703 H315 M325,677 H435 M645,677 H755 M765,703 H875"/>
+        <g fill="none" stroke="#555" stroke-width="1.4" stroke-dasharray="3 5">
+          <ellipse cx="260" cy="703" rx="56" ry="7"/><ellipse cx="380" cy="677" rx="56" ry="7"/>
+          <ellipse cx="700" cy="677" rx="56" ry="7"/><ellipse cx="820" cy="703" rx="56" ry="7"/>
+        </g>
+      </g>
+      <!-- kuyruk -->
+      <path class="ink" data-d="1.4,0.9" d="M532,1150 L372,1182 Q352,1188 356,1206 L532,1214"/>
+      <path class="ink" data-d="1.4,0.9" d="M548,1150 L708,1182 Q728,1188 724,1206 L548,1214"/>
+      <path class="ink thin" data-d="2.0,0.5" d="M540,1120 V1262"/>
+    </g>
+
+    <!-- kurşun delikleri (JS ile üretilir) -->
+    <g id="holes"></g>
+
+    <!-- zırh kutuları -->
+    <g id="armor" opacity="0">
+      <g id="armorBoxes">
+        <rect x="100" y="755" width="150" height="95" fill="url(#hatch)" stroke="#555" stroke-width="3" stroke-dasharray="12 9" data-d="7.5,0.7"/>
+        <rect x="830" y="755" width="150" height="95" fill="url(#hatch)" stroke="#555" stroke-width="3" stroke-dasharray="12 9" data-d="7.6,0.7"/>
+        <rect x="478" y="690" width="124" height="420" fill="url(#hatch)" stroke="#555" stroke-width="3" stroke-dasharray="12 9" data-d="7.8,0.8"/>
+        <rect x="345" y="1140" width="390" height="88" fill="url(#hatch)" stroke="#555" stroke-width="3" stroke-dasharray="12 9" data-d="8.0,0.8"/>
+      </g>
+      <g class="hand" font-size="34" fill="#555">
+        <text x="110" y="895">+ ZIRH</text>
+        <text x="860" y="895">+ ZIRH</text>
+        <text x="618" y="1060">+ ZIRH</text>
+        <text x="750" y="1250">+ ZIRH</text>
+      </g>
+      <g id="armorX" class="redl" style="stroke-width:4">
+        <path data-d="16.0,0.3" d="M105 760 L245 845 M245 760 L105 845"/>
+        <path data-d="16.1,0.3" d="M835 760 L975 845 M975 760 L835 845"/>
+        <path data-d="16.2,0.3" d="M483 700 L597 1100 M597 700 L483 1100"/>
+        <path data-d="16.3,0.3" d="M350 1145 L730 1223 M730 1145 L350 1223"/>
+      </g>
+    </g>
+
+    <!-- motor + kokpit vurgusu -->
+    <g id="crit" opacity="0">
+      <g id="critFill" fill="url(#hatchRed)">
+        <circle cx="540" cy="560" r="62"/>
+        <circle cx="260" cy="760" r="64"/><circle cx="380" cy="742" r="64"/>
+        <circle cx="700" cy="742" r="64"/><circle cx="820" cy="760" r="64"/>
+      </g>
+      <g class="redl">
+        <circle data-d="18.4,0.6" cx="540" cy="560" r="62"/>
+        <circle data-d="18.7,0.5" cx="260" cy="760" r="64"/>
+        <circle data-d="18.8,0.5" cx="380" cy="742" r="64"/>
+        <circle data-d="18.9,0.5" cx="700" cy="742" r="64"/>
+        <circle data-d="19.0,0.5" cx="820" cy="760" r="64"/>
+      </g>
+      <g id="critLabels">
+        <path class="redl" style="stroke-width:2.5" data-d="19.4,0.4" d="M604 538 L700 470 L760 470"/>
+        <text x="770" y="482" class="serif" font-size="40" font-weight="600" style="fill:#D64045" letter-spacing="3">KOKPİT</text>
+        <path class="redl" style="stroke-width:2.5" data-d="19.6,0.4" d="M230 820 L200 930 M350 805 L200 930 L140 930"/>
+        <text x="80" y="975" class="serif" font-size="40" font-weight="600" style="fill:#D64045" letter-spacing="3">MOTOR</text>
+        <path class="redl" style="stroke-width:2.5" data-d="19.7,0.4" d="M850 820 L880 930 M730 805 L880 930 L940 930"/>
+        <text x="860" y="975" class="serif" font-size="40" font-weight="600" style="fill:#D64045" letter-spacing="3">MOTOR</text>
+      </g>
+    </g>
+  </g>
+
+  <!-- düşen uçaklar -->
+  <g id="ghosts" opacity="0">
+    <g id="g1">
+      <g id="g1r">
+        <use href="#mini" x="-80" y="-80" width="160" height="160" fill="none" stroke="#555" stroke-width="3" stroke-dasharray="8 7"/>
+        <circle cx="-44" cy="-10" r="7" fill="#D64045"/><circle cx="0" cy="-50" r="7" fill="#D64045"/>
+      </g>
+      <text y="-95" text-anchor="middle" class="hand" font-size="30" style="fill:#555">dönemeyenler</text>
+    </g>
+    <g id="g2">
+      <g id="g2r">
+        <use href="#mini" x="-80" y="-80" width="160" height="160" fill="none" stroke="#555" stroke-width="3" stroke-dasharray="8 7"/>
+        <circle cx="44" cy="-10" r="7" fill="#D64045"/><circle cx="26" cy="-14" r="7" fill="#D64045"/>
+      </g>
+      <text y="-95" text-anchor="middle" class="hand" font-size="30" style="fill:#555">dönemeyenler</text>
+    </g>
+  </g>
+  <g id="lostNote" opacity="0">
+    <text x="540" y="1345" text-anchor="middle" class="hand" font-size="38" style="fill:#D64045">buradan vurulanlar üsse hiç dönemedi</text>
+    <path class="redl" style="stroke-width:2.5" data-d="21.3,0.6" d="M250 1362 Q540 1376 830 1360"/>
+  </g>
+  <g id="ghostNote" opacity="0"></g>
+
+  <!-- TERAZİ -->
+  <g id="scale" opacity="0">
+    <g filter="url(#rough)">
+      <path class="ink" data-d="27.2,0.8" d="M540 905 V1300"/>
+      <path class="ink" data-d="27.5,0.6" d="M440 1318 L640 1318 L610 1296 L470 1296 Z"/>
+      <path class="ink" data-d="27.4,0.5" d="M518 935 L540 892 L562 935 Z"/>
+      <g id="beam">
+        <path class="ink" data-d="27.7,0.7" d="M210 900 H870"/>
+        <circle class="ink thin" cx="540" cy="900" r="9" data-d="27.9,0.3"/>
+      </g>
+      <g id="panL">
+        <path class="ink thin" data-d="28.2,0.5" d="M0 0 L-120 165 M0 0 L120 165"/>
+        <path class="ink" data-d="28.4,0.5" d="M-135 165 Q0 238 135 165 Z"/>
+      </g>
+      <g id="panR">
+        <path class="ink thin" data-d="28.3,0.5" d="M0 0 L-120 165 M0 0 L120 165"/>
+        <path class="ink" data-d="28.5,0.5" d="M-135 165 Q0 238 135 165 Z"/>
+      </g>
+    </g>
+    <!-- kefe içerikleri (kefelerle birlikte hareket eder) -->
+    <g id="panLc">
+      <g id="winner" opacity="0">
+        <use href="#mini" x="-60" y="38" width="120" height="120" fill="none" stroke="#111" stroke-width="3"/>
+        <g fill="#D64045">
+          <circle cx="-38" cy="100" r="4.5"/><circle cx="-30" cy="104" r="4"/><circle cx="36" cy="101" r="4.5"/>
+          <circle cx="44" cy="98" r="4"/><circle cx="2" cy="118" r="4"/><circle cx="-3" cy="134" r="4"/>
+          <circle cx="-14" cy="142" r="3.5"/><circle cx="16" cy="143" r="3.5"/>
+        </g>
+      </g>
+      <text id="labL" x="0" y="290" text-anchor="middle" class="serif" font-size="40" font-style="italic" font-weight="500" opacity="0">Görünen Başarı</text>
+    </g>
+    <g id="panRc">
+      <g id="losers">
+        <use class="lost" href="#mini" x="-115" y="60" width="100" height="100" fill="none" stroke="#555" stroke-width="3" stroke-dasharray="7 6" opacity="0"/>
+        <use class="lost" href="#mini" x="15" y="60" width="100" height="100" fill="none" stroke="#555" stroke-width="3" stroke-dasharray="7 6" opacity="0"/>
+        <use class="lost" href="#mini" x="-50" y="15" width="100" height="100" fill="none" stroke="#555" stroke-width="3" stroke-dasharray="7 6" opacity="0"/>
+        <use class="lost" href="#mini" x="-50" y="100" width="100" height="100" fill="none" stroke="#555" stroke-width="3" stroke-dasharray="7 6" opacity="0"/>
+      </g>
+      <text id="labR" x="0" y="290" text-anchor="middle" class="serif" font-size="40" font-style="italic" font-weight="500" style="fill:#D64045" opacity="0">Görünmeyen Kayıplar</text>
+    </g>
+  </g>
+
+  <!-- MÜHÜR -->
+  <g id="stamp" opacity="0">
+    <g transform="rotate(-5)">
+      <rect x="-365" y="-46" width="730" height="92" fill="none" stroke="#D64045" stroke-width="5"/>
+      <rect x="-353" y="-34" width="706" height="68" fill="none" stroke="#D64045" stroke-width="2"/>
+      <text x="0" y="14" text-anchor="middle" font-family="EB Garamond, Georgia, serif" font-weight="600" font-size="42" letter-spacing="3" fill="#D64045">HAYATTA KALMA YANILGISI</text>
+    </g>
+  </g>
+
+  <!-- kaydet ikonu -->
+  <g id="save" opacity="0" transform="translate(540 1690)">
+    <path id="savePath" class="ink" data-d="33.6,0.6" d="M-26 -38 H26 V40 L0 18 L-26 40 Z"/>
+  </g>
+
+  <text x="540" y="1860" text-anchor="middle" class="type" font-size="24" style="fill:#555" opacity=".7">@hesabin</text>
+</svg>
+<div id="cap"></div>
+</div>
+
+<script>
+(() => {
+  const DUR = 35;
+  const $ = (id) => document.getElementById(id);
+  const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+  const seg = (t, a, b) => clamp((t - a) / (b - a));
+  const eio = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+  const eo = (x) => 1 - Math.pow(1 - x, 3);
+  const back = (x) => 1 + 2.7 * Math.pow(x - 1, 3) + 1.7 * Math.pow(x - 1, 2);
+  const lerp = (a, b, u) => a + (b - a) * u;
+  const win = (t, a, b, f = 0.4) => eio(seg(t, a, a + f)) * (1 - eio(seg(t, b - f, b)));
+  const params = new URLSearchParams(location.search);
+  if (params.has("capture")) document.body.classList.add("capture");
+
+  // ---------- sahneyi ekrana sığdır (9:16)
+  const stage = $("stage");
+  function fit() {
+    const s = Math.min(innerWidth / 1080, innerHeight / 1920);
+    stage.style.transform = `scale(${s}) translate(-50%, -50%)`;
+    stage.style.transformOrigin = "0 0";
+  }
+  addEventListener("resize", fit);
+  fit();
+
+  // ---------- çizilen (stroke-dasharray) öğeler
+  const draws = [...document.querySelectorAll("[data-d]")].map((el) => {
+    const [s, d] = el.dataset.d.split(",").map(Number);
+    const da = getComputedStyle(el).strokeDasharray;
+    const keepDash = da && da !== "none";
+    if (!keepDash) el.setAttribute("pathLength", "1");
+    return { el, s, d, keepDash };
+  });
+  function applyDraws(t) {
+    for (const o of draws) {
+      const p = eio(seg(t, o.s, o.s + o.d));
+      if (o.keepDash) {
+        // kesikli çizgiler: çizim yerine maske gibi opaklıkla gelir
+        o.el.style.opacity = p;
+        continue;
+      }
+      o.el.style.strokeDasharray = "1 1";
+      o.el.style.strokeDashoffset = 1 - p;
+      o.el.style.opacity = p > 0.001 ? 1 : 0;
+    }
+  }
+
+  // ---------- ilerleme göstergesi
+  const STAGES = [[0, 7, "KANCA"], [7, 16, "HATA"], [16, 26, "AYDINLANMA"], [26, 999, "DERS"]];
+  const NUMS = ["I", "II", "III", "IV"];
+  const numG = $("numerals");
+  const NS = "http://www.w3.org/2000/svg";
+  const numEls = NUMS.map((n, i) => {
+    const x = 540 + (i - 1.5) * 170;
+    const tx = document.createElementNS(NS, "text");
+    tx.setAttribute("x", x); tx.setAttribute("y", 16);
+    tx.textContent = n;
+    const c = document.createElementNS(NS, "circle");
+    c.setAttribute("cx", x); c.setAttribute("cy", 0); c.setAttribute("r", 36);
+    c.setAttribute("fill", "none"); c.setAttribute("stroke", "#D64045");
+    c.setAttribute("stroke-width", "3"); c.setAttribute("pathLength", "1");
+    c.setAttribute("transform", `rotate(-100 ${x} 0)`);
+    numG.append(c, tx);
+    return { tx, c };
+  });
+  function applyProgress(t) {
+    let cur = 0;
+    STAGES.forEach((s, i) => { if (t >= s[0]) cur = i; });
+    numEls.forEach(({ tx, c }, i) => {
+      tx.setAttribute("fill", i < cur ? "#111" : i === cur ? "#D64045" : "#555");
+      tx.setAttribute("fill-opacity", i <= cur ? 1 : 0.35);
+      const p = i === cur ? eio(seg(t, STAGES[i][0] + 0.05, STAGES[i][0] + 0.7)) : 0;
+      c.style.strokeDasharray = "1 1";
+      c.style.strokeDashoffset = 1 - p;
+      c.style.opacity = p > 0 ? 1 : 0;
+    });
+    const nm = $("stageName");
+    nm.textContent = STAGES[cur][2];
+    nm.setAttribute("opacity", eo(seg(t, STAGES[cur][0], STAGES[cur][0] + 0.5)));
+  }
+
+  // ---------- kurşun delikleri
+  function rng(seed) {
+    return () => {
+      seed |= 0; seed = (seed + 0x6d2b79f5) | 0;
+      let r = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+      r = (r + Math.imul(r ^ (r >>> 7), 61 | r)) ^ r;
+      return ((r ^ (r >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  const R = rng(1943);
+  const le = (x) => 700 + (490 - x) * (82 / 372); // sol kanat hücum kenarı
+  const zones = [];
+  const add = (n, fx, fy) => { for (let i = 0; i < n; i++) { const x = fx(); zones.push([x, fy(x)]); } };
+  for (const side of [1, -1]) {
+    const m = (x) => (side === 1 ? x : 1080 - x);
+    add(8, () => m(lerp(130, 228, R())), (x) => lerp(le(side === 1 ? x : 1080 - x) + 12, 826, R()));
+    add(4, () => m(lerp(296, 346, R())), (x) => lerp(le(side === 1 ? x : 1080 - x) + 12, 835, R()));
+    add(5, () => m(lerp(414, 478, R())), (x) => lerp(le(side === 1 ? x : 1080 - x) + 12, 840, R()));
+    add(5, () => m(lerp(382, 522, R())), () => lerp(1172, 1206, R()));
+  }
+  add(16, () => lerp(500, 580, R()), () => {
+    let y; do { y = lerp(690, 1110, R()); } while (Math.abs(y - 935) < 26);
+    return y;
+  });
+  const holesG = $("holes");
+  const holes = zones.map(([x, y], i) => {
+    const g = document.createElementNS(NS, "g");
+    const r = lerp(5, 8.5, R());
+    const ring = document.createElementNS(NS, "circle");
+    ring.setAttribute("r", r + 4); ring.setAttribute("fill", "none");
+    ring.setAttribute("stroke", "#111"); ring.setAttribute("stroke-width", "1.4");
+    ring.setAttribute("stroke-dasharray", `${lerp(4, 9, R())} ${lerp(3, 6, R())}`);
+    ring.setAttribute("opacity", ".55");
+    const dot = document.createElementNS(NS, "circle");
+    dot.setAttribute("r", r); dot.setAttribute("fill", "#D64045");
+    g.append(ring, dot);
+    holesG.append(g);
+    return { g, dot, ring, x, y, t0: 3.5 + R() * 3.0 };
+  });
+  function applyHoles(t) {
+    const fade = eio(seg(t, 17.0, 18.4)) * (1 - eio(seg(t, 26.2, 27.2)) * 0.85);
+    for (const h of holes) {
+      const p = seg(t, h.t0, h.t0 + 0.28);
+      const s = p <= 0 ? 0 : back(p);
+      h.g.setAttribute("transform", `translate(${h.x} ${h.y}) scale(${s})`);
+      h.dot.setAttribute("fill-opacity", lerp(1, 0.12, fade));
+      h.ring.setAttribute("opacity", lerp(0.55, 0.3, fade));
+    }
+  }
+
+  // ---------- altyazı (daktilo)
+  const CAPS = [
+    [0.3, 6.9, "Üsse dönen uçakların hep **aynı yerlerinde** kurşun delikleri vardı."],
+    [7.2, 15.8, "Ordu, **en çok vurulan yerleri** güçlendirmek istedi."],
+    [16.2, 20.4, "Ama matematikçi **Abraham Wald** onları durdurdu:"],
+    [20.5, 25.9, "“Siz sadece **geri dönebilen** uçaklara bakıyorsunuz.”"],
+    [26.2, 29.4, "Buna **Hayatta Kalma Yanılgısı** denir."],
+    [29.5, 33.2, "Sadece kazananların hikâyesini dinlersen, **kaybedenlerin düştüğü tuzağı** göremezsin."],
+    [33.3, 1e9, "**Kaydet.**"],
+  ].map(([a, b, s]) => {
+    const chars = [];
+    let red = false;
+    for (let i = 0; i < s.length; i++) {
+      if (s[i] === "*" && s[i + 1] === "*") { red = !red; i++; continue; }
+      chars.push([s[i], red]);
+    }
+    return { a, b, chars };
+  });
+  const capEl = $("cap");
+  let capKey = "";
+  const esc = (c) => (c === "<" ? "&lt;" : c === "&" ? "&amp;" : c);
+  function applyCaption(t) {
+    const c = CAPS.find((c) => t >= c.a && t < c.b);
+    if (!c) { if (capKey) { capEl.innerHTML = ""; capKey = ""; } return; }
+    const n = Math.min(c.chars.length, Math.floor((t - c.a) * 34));
+    const caretOn = n < c.chars.length || (t * 2) % 1 < 0.55;
+    const op = 1 - eio(seg(t, c.b - 0.25, c.b));
+    const key = `${c.a}|${n}|${caretOn}|${op.toFixed(2)}`;
+    if (key === capKey) return;
+    capKey = key;
+    let html = "", red = false;
+    for (let i = 0; i < n; i++) {
+      const [ch, r] = c.chars[i];
+      if (r !== red) { html += r ? '<span class="r">' : "</span>"; red = r; }
+      html += esc(ch);
+    }
+    if (red) html += "</span>";
+    if (caretOn) html += '<span class="caret">▍</span>';
+    capEl.innerHTML = html;
+    capEl.style.opacity = op;
+  }
+
+  // ---------- kare
+  const op = (id, v) => $(id).setAttribute("opacity", clamp(v));
+  function render(t) {
+    applyDraws(t);
+    applyProgress(t);
+    applyHoles(t);
+    applyCaption(t);
+
+    // başlık notu (daktilo)
+    const tn = "PLAN GÖRÜNÜŞ · AĞIR BOMBARDIMAN UÇAĞI · 1943";
+    $("tn1").textContent = tn.slice(0, Math.floor(seg(t, 0.4, 2.0) * tn.length));
+    op("titleNote", 1 - eio(seg(t, 6.6, 7.1)));
+    op("dims", eio(seg(t, 2.3, 2.8)) * (1 - eio(seg(t, 6.6, 7.2))));
+
+    // II: zırh
+    const armorIn = eo(seg(t, 7.4, 7.8));
+    const blink = t > 9 && t < 16 ? 0.55 + 0.45 * (0.5 + 0.5 * Math.cos((t - 9) * 7)) : 1;
+    op("armor", armorIn * blink * (1 - eio(seg(t, 17.0, 17.8))));
+    op("planNote", win(t, 8.3, 16.0, 0.4));
+
+    // III: Wald
+    op("wald", win(t, 16.2, 26.1, 0.45));
+    const pulse = t > 19.6 ? 0.78 + 0.22 * Math.sin(t * 5) : 1;
+    op("crit", eo(seg(t, 18.3, 18.6)) * pulse * (1 - 0.35 * eio(seg(t, 26.2, 27.2))));
+    op("critLabels", 1 - eio(seg(t, 25.8, 26.4)));
+    $("critFill").setAttribute("opacity", eo(seg(t, 19.0, 19.6)));
+    op("lostNote", win(t, 21.0, 26.1, 0.4));
+    const gA = win(t, 22.0, 26.0, 0.5);
+    op("ghosts", gA * 0.85);
+    op("ghostNote", gA);
+    const ft = Math.max(0, t - 22);
+    $("g1").setAttribute("transform", `translate(${170 - ft * 6} ${1110 + ft * 38})`);
+    $("g1r").setAttribute("transform", `rotate(${-14 - ft * 14})`);
+    $("g2").setAttribute("transform", `translate(${910 + ft * 6} ${1125 + ft * 34})`);
+    $("g2r").setAttribute("transform", `rotate(${16 + ft * 12})`);
+
+    // IV: küçülme + terazi
+    const u = eio(seg(t, 26.0, 27.3));
+    const s = 1 - 0.6 * u;
+    const cy = 860 - 280 * u;
+    $("planeWrap").setAttribute("transform", `translate(540 ${cy}) scale(${s}) translate(-540 -860)`);
+    op("scale", eo(seg(t, 27.1, 27.4)));
+    let ang = lerp(-7, 13, eio(seg(t, 30.2, 31.8)));
+    if (t > 31.8) ang += 2.2 * Math.sin((t - 31.8) * 6) * Math.exp(-(t - 31.8) * 1.6);
+    $("beam").setAttribute("transform", `rotate(${ang} 540 900)`);
+    const rad = (ang * Math.PI) / 180;
+    const L = [540 - 330 * Math.cos(rad), 900 - 330 * Math.sin(rad)];
+    const Rr = [540 + 330 * Math.cos(rad), 900 + 330 * Math.sin(rad)];
+    for (const [id, p] of [["panL", L], ["panLc", L], ["panR", Rr], ["panRc", Rr]]) {
+      $(id).setAttribute("transform", `translate(${p[0]} ${p[1]})`);
+    }
+    op("winner", eo(seg(t, 28.6, 29.1)));
+    op("labL", eo(seg(t, 28.8, 29.3)));
+    document.querySelectorAll(".lost").forEach((el, i) => {
+      el.setAttribute("opacity", eo(seg(t, 29.6 + i * 0.22, 29.9 + i * 0.22)));
+    });
+    op("labR", eo(seg(t, 30.2, 30.6)));
+
+    // mühür
+    const sp = seg(t, 26.5, 26.85);
+    const ss = lerp(1.7, 1, eo(sp));
+    op("stamp", sp > 0 ? Math.min(1, sp * 1.4) * 0.92 : 0);
+    $("stamp").setAttribute("transform", `translate(540 335) scale(${ss})`);
+
+    // kaydet
+    op("save", eo(seg(t, 33.5, 33.7)));
+    $("savePath").style.fill = `rgba(214,64,69,${eo(seg(t, 34.1, 34.5))})`;
+  }
+
+  // ---------- oynatma
+  let start = null, raf = 0;
+  const fixed = params.get("t");
+  function loop(now) {
+    if (start === null) start = now;
+    const t = Math.min(DUR, (now - start) / 1000);
+    render(t);
+    if (t < DUR) raf = requestAnimationFrame(loop);
+  }
+  function play() {
+    cancelAnimationFrame(raf);
+    start = null;
+    raf = requestAnimationFrame(loop);
+  }
+  $("replay").addEventListener("click", play);
+  window.__render = render; // kare yakalama için
+
+  const ready = Promise.race([document.fonts ? document.fonts.ready : Promise.resolve(),
+                              new Promise((r) => setTimeout(r, 1500))]);
+  ready.then(() => {
+    if (fixed !== null) render(parseFloat(fixed));
+    else play();
+  });
+})();
+</script>
+</body>
+</html>
