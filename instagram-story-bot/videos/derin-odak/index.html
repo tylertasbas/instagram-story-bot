@@ -1,0 +1,534 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Derin Odak</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #18191A;
+    --green: #2EC4B6;
+    --red: #FF3B30;
+    --amber: #F5B700;
+    --text: #E9EAEC;
+    --muted: #7C8086;
+    --spring: cubic-bezier(.34, 1.56, .64, 1);
+    --out: 14px 14px 30px rgba(0,0,0,.62), -12px -12px 28px rgba(255,255,255,.045);
+    --out-sm: 7px 7px 16px rgba(0,0,0,.6), -6px -6px 14px rgba(255,255,255,.045);
+    --in: inset 10px 10px 20px rgba(0,0,0,.62), inset -8px -8px 18px rgba(255,255,255,.04);
+    --in-sm: inset 5px 5px 10px rgba(0,0,0,.6), inset -4px -4px 9px rgba(255,255,255,.045);
+    --sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #0e0f10; }
+  #stage {
+    position: absolute; left: 50%; top: 50%;
+    width: 1080px; height: 1920px; transform-origin: 0 0;
+    background: radial-gradient(120% 70% at 50% 40%, #1d1e20 0%, var(--bg) 60%);
+    overflow: hidden; color: var(--text); font-family: var(--sans);
+  }
+  #replay {
+    position: fixed; top: 14px; left: 50%; transform: translateX(-50%); z-index: 10;
+    font: 600 16px var(--sans); color: var(--text); background: var(--bg);
+    border: 0; border-radius: 999px; padding: 11px 22px; cursor: pointer;
+    box-shadow: 5px 5px 12px rgba(0,0,0,.7), -4px -4px 10px rgba(255,255,255,.06);
+    transition: transform .35s var(--spring), box-shadow .2s;
+  }
+  #replay:hover { transform: translateX(-50%) scale(1.06); }
+  #replay:active { box-shadow: inset 4px 4px 9px rgba(0,0,0,.7), inset -3px -3px 8px rgba(255,255,255,.05); }
+  body.capture #replay { display: none; }
+
+  .abs { position: absolute; }
+  .neu-out { background: var(--bg); box-shadow: var(--out); }
+  .neu-in  { background: var(--bg); box-shadow: var(--in); }
+  .scene { position: absolute; inset: 0; opacity: 0; will-change: transform, opacity; }
+
+  /* adım göstergesi */
+  #steps { position: absolute; top: 140px; left: 0; width: 1080px; display: flex; justify-content: center; gap: 18px; }
+  .step { width: 34px; height: 14px; border-radius: 7px; box-shadow: var(--in-sm); overflow: hidden; }
+  .step i { display: block; height: 100%; width: 0; background: var(--green); border-radius: 7px; box-shadow: 0 0 12px rgba(46,196,182,.6); }
+  #stepName { position: absolute; top: 176px; width: 1080px; text-align: center; font: 600 20px var(--sans); letter-spacing: 6px; color: var(--muted); }
+
+  /* altyazı */
+  #cap {
+    position: absolute; left: 80px; width: 920px; top: 1500px;
+    font: 500 50px/1.32 var(--sans); text-align: center; letter-spacing: -.3px;
+  }
+  #cap span { display: inline-block; white-space: pre; will-change: transform, opacity; }
+  #cap .b { color: #fff; font-weight: 700; }
+  #cap .n { color: #A9ADB3; }
+  #cap .r { color: var(--red); font-weight: 700; }
+  #cap .g { color: var(--green); font-weight: 700; }
+  #cap .a { color: var(--amber); font-weight: 700; }
+  #wm { position: absolute; bottom: 70px; width: 1080px; text-align: center; font: 500 24px var(--sans); color: #4b4e53; }
+
+  /* S1: kadran */
+  #dial { left: 215px; top: 470px; width: 650px; height: 650px; border-radius: 50%; }
+  #dial .ring { position: absolute; inset: 38px; border-radius: 50%; box-shadow: var(--in); }
+  #dial svg { position: absolute; inset: 0; width: 650px; height: 650px; overflow: visible; }
+  #dialCore {
+    position: absolute; left: 155px; top: 155px; width: 340px; height: 340px; border-radius: 50%;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    box-shadow: var(--out);
+    background: linear-gradient(145deg, #1c1d1f, #151617);
+  }
+  #pct { font: 300 128px/1 var(--mono); letter-spacing: -4px; }
+  #pct small { font-size: 54px; margin-left: 4px; }
+  #dialLabel { margin-top: 14px; font: 700 22px var(--sans); letter-spacing: 7px; color: var(--muted); }
+  #notif {
+    left: 110px; top: 300px; width: 860px; height: 150px; border-radius: 36px;
+    display: flex; align-items: center; gap: 28px; padding: 0 34px;
+    background: linear-gradient(145deg, #232426, #1a1b1c);
+    box-shadow: 18px 22px 40px rgba(0,0,0,.7), -8px -8px 20px rgba(255,255,255,.04), 0 0 0 1.5px rgba(255,59,48,.35), 0 0 60px rgba(255,59,48,.18);
+    opacity: 0;
+  }
+  .appIcon { width: 86px; height: 86px; border-radius: 24px; background: var(--red); display: grid; place-items: center; box-shadow: 0 6px 22px rgba(255,59,48,.45); flex: none; }
+  .nTop { font: 600 22px var(--sans); color: var(--muted); letter-spacing: .5px; }
+  .nMsg { font: 700 34px var(--sans); color: #fff; margin-top: 6px; white-space: nowrap; }
+  .nMsg em { font-style: normal; color: var(--red); }
+  #peek { margin-left: auto; white-space: nowrap; font: 500 22px var(--mono); color: var(--amber); padding: 12px 18px; border-radius: 18px; box-shadow: var(--in-sm); opacity: 0; }
+
+  /* S2: sayaç */
+  #clockPanel { left: 90px; top: 520px; width: 900px; height: 420px; border-radius: 60px; }
+  #clock { position: absolute; top: 60px; width: 900px; text-align: center; font: 300 230px/1 var(--mono); letter-spacing: -8px; color: #fff; }
+  #clockUnits { position: absolute; top: 300px; width: 900px; display: flex; justify-content: center; gap: 330px; font: 600 24px var(--sans); letter-spacing: 6px; color: var(--muted); }
+  #clockBar { position: absolute; left: 90px; top: 360px; width: 720px; height: 14px; border-radius: 7px; box-shadow: var(--in-sm); overflow: hidden; }
+  #clockBar i { display: block; height: 100%; width: 0; background: var(--amber); border-radius: 7px; box-shadow: 0 0 14px rgba(245,183,0,.7); }
+  #study {
+    left: 140px; top: 1010px; width: 800px; padding: 30px 36px; border-radius: 36px;
+    display: flex; gap: 24px; align-items: center;
+  }
+  .dotA { width: 22px; height: 22px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 18px rgba(245,183,0,.8); flex: none; }
+  #study b { display: block; font: 700 32px var(--sans); color: #fff; }
+  #study span { display: block; margin-top: 6px; font: 500 24px var(--sans); color: var(--muted); }
+  #s2tag { left: 0; top: 1220px; width: 1080px; text-align: center; font: 600 28px var(--sans); color: var(--amber); letter-spacing: 1px; }
+
+  /* S3: iş günü */
+  #dayCard { left: 70px; top: 470px; width: 940px; height: 520px; border-radius: 52px; padding: 46px 50px; }
+  .row { display: flex; justify-content: space-between; align-items: center; }
+  #dayTitle { font: 700 36px var(--sans); }
+  #dayTitle span { color: var(--muted); font-weight: 500; }
+  #interrupts { font: 600 24px var(--mono); color: var(--red); padding: 12px 20px; border-radius: 18px; box-shadow: var(--in-sm); }
+  #track { position: relative; margin-top: 110px; height: 110px; border-radius: 55px; box-shadow: var(--in); overflow: hidden; }
+  #greenFill { position: absolute; left: 10px; top: 10px; bottom: 10px; width: 0; border-radius: 45px; background: linear-gradient(90deg, #26a99c, var(--green)); box-shadow: 0 0 26px rgba(46,196,182,.45); }
+  .blk { position: absolute; top: 10px; bottom: 10px; background: linear-gradient(180deg, #ff5a50, var(--red)); border-radius: 10px; transform-origin: left center; box-shadow: 0 0 18px rgba(255,59,48,.55); }
+  .pin { position: absolute; top: -78px; width: 44px; height: 60px; margin-left: -22px; opacity: 0; }
+  #ticks { margin-top: 20px; font: 500 22px var(--mono); color: var(--muted); }
+  #legend { margin-top: 44px; display: flex; gap: 46px; font: 600 24px var(--sans); color: #c5c8cc; }
+  #legend i { display: inline-block; width: 22px; height: 22px; border-radius: 6px; margin-right: 12px; vertical-align: -3px; }
+  .stat { top: 1050px; width: 450px; height: 230px; border-radius: 44px; padding: 34px 38px; opacity: 0; }
+  .stat .k { font: 600 24px var(--sans); color: var(--muted); letter-spacing: .5px; }
+  .stat .v { margin-top: 12px; font: 400 76px/1 var(--mono); letter-spacing: -3px; }
+  .stat .s { margin-top: 12px; font: 500 24px var(--sans); color: var(--muted); }
+  #need { left: 0; top: 1330px; width: 1080px; text-align: center; font: 600 28px var(--sans); color: var(--amber); opacity: 0; }
+
+  /* S4: anahtarlar */
+  .tgl { left: 110px; width: 860px; height: 180px; border-radius: 48px; display: flex; align-items: center; padding: 0 40px; gap: 30px; }
+  .tIcon { width: 96px; height: 96px; border-radius: 50%; box-shadow: var(--in-sm); display: grid; place-items: center; flex: none; }
+  .tTxt b { display: block; font: 700 38px var(--sans); }
+  .tTxt span { display: block; margin-top: 6px; font: 500 26px var(--sans); color: var(--muted); }
+  .sw { margin-left: auto; width: 160px; height: 84px; border-radius: 42px; box-shadow: var(--in); position: relative; flex: none; }
+  .sw .fill { position: absolute; inset: 8px; border-radius: 34px; opacity: 0; }
+  .sw .knob { position: absolute; top: 9px; left: 9px; width: 66px; height: 66px; border-radius: 50%;
+    background: linear-gradient(145deg, #232426, #18191a); box-shadow: 6px 6px 14px rgba(0,0,0,.7), -4px -4px 10px rgba(255,255,255,.07); }
+  #focusBar { left: 110px; top: 1130px; width: 860px; height: 150px; border-radius: 44px; padding: 30px 40px; opacity: 0; }
+  #focusBar .row b { font: 700 30px var(--sans); }
+  #focusPct { font: 500 30px var(--mono); color: var(--green); }
+  #fTrack { margin-top: 20px; height: 26px; border-radius: 13px; box-shadow: var(--in-sm); overflow: hidden; }
+  #fTrack i { display: block; height: 100%; width: 0; border-radius: 13px; background: var(--green); box-shadow: 0 0 18px rgba(46,196,182,.7); }
+
+  #cursor { position: absolute; left: 0; top: 0; width: 56px; height: 56px; opacity: 0; filter: drop-shadow(4px 6px 8px rgba(0,0,0,.6)); }
+  #clickRing { position: absolute; width: 40px; height: 40px; margin: -20px 0 0 -20px; border-radius: 50%; border: 3px solid #fff; opacity: 0; }
+</style>
+</head>
+<body>
+<button id="replay" type="button">↻ Yeniden Oynat</button>
+
+<div id="stage">
+  <div id="steps"><div class="step"><i></i></div><div class="step"><i></i></div><div class="step"><i></i></div><div class="step"><i></i></div></div>
+  <div id="stepName"></div>
+
+  <!-- 1: KANCA -->
+  <section class="scene" id="s1">
+    <div id="dial" class="abs neu-out">
+      <div class="ring"></div>
+      <svg viewBox="0 0 650 650">
+        <defs>
+          <filter id="glow" x="-30%" y="-30%" width="160%" height="160%">
+            <feGaussianBlur stdDeviation="9" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+          </filter>
+        </defs>
+        <circle cx="325" cy="325" r="250" fill="none" stroke="#141516" stroke-width="40"/>
+        <circle id="arc" cx="325" cy="325" r="250" fill="none" stroke="#2EC4B6" stroke-width="30" stroke-linecap="round"
+                pathLength="100" stroke-dasharray="0 100" transform="rotate(-90 325 325)" filter="url(#glow)"/>
+        <g id="ticksDial" stroke="#3a3c40" stroke-width="3" stroke-linecap="round"></g>
+      </svg>
+      <div id="dialCore">
+        <div id="pct">0<small>%</small></div>
+        <div id="dialLabel">DERİN ODAK</div>
+      </div>
+    </div>
+    <div id="notif" class="abs">
+      <div class="appIcon">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="#fff"><path d="M12 3C6.5 3 2 6.6 2 11c0 2.4 1.3 4.6 3.4 6.1L4.5 21l4.2-2.3c1 .3 2.1.4 3.3.4 5.5 0 10-3.6 10-8S17.5 3 12 3z"/></svg>
+      </div>
+      <div>
+        <div class="nTop">MESAJLAR · şimdi</div>
+        <div class="nMsg">1 Yeni Mesaj: <em>“Bak bi”</em></div>
+      </div>
+      <div id="peek">0,0 sn</div>
+    </div>
+  </section>
+
+  <!-- 2: VERİ -->
+  <section class="scene" id="s2">
+    <div id="clockPanel" class="abs neu-in">
+      <div id="clock">00:00</div>
+      <div id="clockUnits"><span>DK</span><span>SN</span></div>
+      <div id="clockBar"><i></i></div>
+    </div>
+    <div id="study" class="abs neu-out">
+      <div class="dotA"></div>
+      <div><b>Kaliforniya Üniversitesi, Irvine</b><span>Gloria Mark · bölünen işe geri dönüş araştırması</span></div>
+    </div>
+    <div id="s2tag" class="abs">bölünme başına ortalama geri dönüş süresi</div>
+  </section>
+
+  <!-- 3: SİMÜLASYON -->
+  <section class="scene" id="s3">
+    <div id="dayCard" class="abs neu-out">
+      <div class="row">
+        <div id="dayTitle">Çalışma günü <span>· 8 saat</span></div>
+        <div id="interrupts">bölünme 0/10</div>
+      </div>
+      <div id="track"><div id="greenFill"></div></div>
+      <div id="ticks" class="row"><span>09:00</span><span>11:00</span><span>13:00</span><span>15:00</span><span>17:00</span></div>
+      <div id="legend">
+        <div><i style="background:var(--green)"></i>Odak</div>
+        <div><i style="background:var(--red)"></i>Zihinsel Toparlanma Süresi</div>
+      </div>
+    </div>
+    <div id="statLost" class="abs stat neu-out" style="left:70px">
+      <div class="k">KAYBEDİLEN SÜRE</div>
+      <div class="v" style="color:var(--red);font-size:68px">3sa 53dk</div>
+      <div class="s">günün %48'i</div>
+    </div>
+    <div id="statLong" class="abs stat neu-out" style="left:560px">
+      <div class="k">EN UZUN ODAK</div>
+      <div class="v" style="color:var(--amber)" id="longest">25 dk</div>
+      <div class="s">kesintisiz</div>
+    </div>
+    <div id="need" class="abs">Derin iş için gereken: 90 dk kesintisiz odak</div>
+  </section>
+
+  <!-- 4: ÇÖZÜM -->
+  <section class="scene" id="s4">
+    <div id="t1" class="abs tgl neu-out" style="top:600px">
+      <div class="tIcon">
+        <svg id="bell" width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="#FF3B30" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/><path id="bellSlash" d="M3 3l18 18" opacity="0"/></svg>
+      </div>
+      <div class="tTxt"><b>Bildirimler</b><span id="t1s">Açık</span></div>
+      <div class="sw" id="sw1"><div class="fill" style="background:var(--red);box-shadow:0 0 22px rgba(255,59,48,.6)"></div><div class="knob"></div></div>
+    </div>
+    <div id="t2" class="abs tgl neu-out" style="top:830px">
+      <div class="tIcon">
+        <svg id="plane" width="46" height="46" viewBox="0 0 24 24" fill="#7C8086"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/></svg>
+      </div>
+      <div class="tTxt"><b>Uçak Modu (90 Dk)</b><span id="t2s">Kapalı</span></div>
+      <div class="sw" id="sw2"><div class="fill" style="background:var(--green);box-shadow:0 0 22px rgba(46,196,182,.7)"></div><div class="knob"></div></div>
+    </div>
+    <div id="focusBar" class="abs neu-out">
+      <div class="row"><b>Derin Odak</b><span id="focusPct">%0</span></div>
+      <div id="fTrack"><i></i></div>
+    </div>
+  </section>
+
+  <div id="cap"></div>
+  <div id="wm">@hesabin</div>
+  <div id="clickRing"></div>
+  <svg id="cursor" viewBox="0 0 28 28"><path d="M5 3 L5 22 L10 17.5 L13.5 25 L17 23.5 L13.6 16 L20.5 16 Z" fill="#fff" stroke="#111" stroke-width="1.4" stroke-linejoin="round"/></svg>
+</div>
+
+<script>
+(() => {
+  const DUR = 32;
+  const $ = (id) => document.getElementById(id);
+  const clamp = (x, a = 0, b = 1) => Math.max(a, Math.min(b, x));
+  const seg = (t, a, b) => clamp((t - a) / (b - a));
+  const eio = (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+  const eo = (x) => 1 - Math.pow(1 - x, 3);
+  const lerp = (a, b, u) => a + (b - a) * u;
+  // fizik tabanlı yay: tetiklendikten dt saniye sonra 0 -> 1 (aşıp oturur)
+  const spring = (dt, k = 9, w = 13) => (dt <= 0 ? 0 : 1 - Math.exp(-dt * k) * Math.cos(dt * w));
+  const mixHex = (a, b, u) => {
+    const p = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+    const A = p(a), B = p(b);
+    return `rgb(${A.map((v, i) => Math.round(lerp(v, B[i], u))).join(",")})`;
+  };
+  const params = new URLSearchParams(location.search);
+  if (params.has("capture")) document.body.classList.add("capture");
+
+  const stage = $("stage");
+  const fit = () => {
+    const s = Math.min(innerWidth / 1080, innerHeight / 1920);
+    stage.style.transform = `scale(${s}) translate(-50%, -50%)`;
+  };
+  addEventListener("resize", fit); fit();
+
+  // kadran çentikleri
+  const tg = $("ticksDial");
+  for (let i = 0; i < 60; i++) {
+    const a = (i / 60) * Math.PI * 2, r1 = 300, r2 = i % 5 ? 308 : 316;
+    const l = document.createElementNS("http://www.w3.org/2000/svg", "line");
+    l.setAttribute("x1", 325 + r1 * Math.sin(a)); l.setAttribute("y1", 325 - r1 * Math.cos(a));
+    l.setAttribute("x2", 325 + r2 * Math.sin(a)); l.setAttribute("y2", 325 - r2 * Math.cos(a));
+    tg.append(l);
+  }
+
+  // iş günü: 10 bölünme × 23,25 dk (480 dk içinde)
+  const MIN = 480, REC = 23.25;
+  const STARTS = [24, 70, 112, 160, 205, 250, 298, 345, 392, 440];
+  const track = $("track");
+  const TW = 940 - 100 - 20; // iç genişlik (kart padding + iz boşluğu)
+  const blocks = STARTS.map((m, i) => {
+    const b = document.createElement("div");
+    b.className = "blk";
+    b.style.left = 10 + (m / MIN) * TW + "px";
+    b.style.width = (REC / MIN) * TW + "px";
+    b.style.transform = "scaleX(0)";
+    track.append(b);
+    const pin = document.createElement("div");
+    pin.className = "pin";
+    pin.innerHTML = '<svg width="44" height="60" viewBox="0 0 44 60"><rect x="6" y="2" width="32" height="50" rx="7" fill="#232426" stroke="#FF3B30" stroke-width="3"/><circle cx="31" cy="9" r="7" fill="#FF3B30"/></svg>';
+    pin.style.left = 50 + 10 + ((m + REC / 2) / MIN) * TW + "px";
+    $("dayCard").append(pin);
+    return { b, pin, t0: 18.0 + i * 0.36 };
+  });
+  {
+    let longest = STARTS[0], prevEnd = 0;
+    STARTS.forEach((s) => { longest = Math.max(longest, s - prevEnd); prevEnd = s + REC; });
+    longest = Math.max(longest, MIN - prevEnd);
+    $("longest").textContent = Math.round(longest) + " dk";
+  }
+  pinTopFix();
+  function pinTopFix() { blocks.forEach(({ pin }) => { pin.style.top = 46 + 60 + 110 - 78 + "px"; }); }
+
+  // altyazılar: * beyaz, ! kırmızı, + yeşil, ^ sarı
+  const CAPS = [
+    [0.3, 6.9, "Telefonuna gelen *tek *bir *bildirime bakmak ^3 ^saniye sürer."],
+    [7.2, 15.8, "Ama beyninin böldüğün işe *aynı *derinlikte geri dönmesi tam ^23 ^dakika ^15 ^saniye sürer."],
+    [16.2, 24.8, "Günde *10 *kez bölünürsen, bütün gün çalışıp !hiçbir !şey !üretememiş hissedersin."],
+    [25.2, 28.6, "Zamanını değil, +dikkatini koru."],
+    [28.7, 1e9, "Odaklanmakta zorlanan bir *arkadaşına *gönder."],
+  ].map(([a, b, s]) => ({
+    a, b,
+    words: s.split(" ").map((w) => {
+      const m = { "*": "b", "!": "r", "+": "g", "^": "a" }[w[0]];
+      return m ? [w.slice(1), m] : [w, "n"];
+    }),
+  }));
+  const cap = $("cap");
+  let curCap = null, spans = [];
+  function applyCaption(t) {
+    const c = CAPS.find((c) => t >= c.a && t < c.b) || null;
+    if (c !== curCap) {
+      curCap = c;
+      cap.innerHTML = "";
+      spans = [];
+      if (c) c.words.forEach(([w, cls], i) => {
+        const s = document.createElement("span");
+        s.className = cls;
+        s.textContent = w + (i < c.words.length - 1 ? " " : "");
+        cap.append(s);
+        spans.push(s);
+      });
+    }
+    if (!c) return;
+    const out = 1 - eio(seg(t, c.b - 0.3, c.b));
+    spans.forEach((s, i) => {
+      const dt = t - c.a - i * 0.085;
+      const p = spring(dt, 10, 14);
+      s.style.opacity = clamp(dt / 0.18) * out;
+      s.style.transform = `translateY(${(1 - p) * 40}px)`;
+    });
+  }
+
+  // sahne giriş/çıkışı (yaylı)
+  function sceneIn(id, t, a, b) {
+    const el = $(id);
+    const pin = spring(t - a, 8, 11);
+    const pout = eio(seg(t, b - 0.45, b));
+    el.style.opacity = clamp((t - a) / 0.3) * (1 - pout);
+    el.style.transform = `translateY(${(1 - pin) * 120 - pout * 80}px) scale(${lerp(0.94, 1, clamp(pin)) - pout * 0.04})`;
+    el.style.visibility = t < a || t > b ? "hidden" : "visible";
+  }
+
+  const STEPS = [[0, 7, "KANCA"], [7, 16, "VERİ"], [16, 25, "SİMÜLASYON"], [25, 1e9, "ÇÖZÜM"]];
+  const stepFills = [...document.querySelectorAll(".step i")];
+
+  // imleç yolu (S4)
+  const CUR = [[25.0, 930, 1700], [26.4, 885, 690], [26.6, 885, 690], [27.6, 885, 920], [29.4, 885, 920], [30.4, 1000, 1250]];
+  const CLICKS = [26.6, 27.8];
+  function cursorAt(t) {
+    for (let i = 0; i < CUR.length - 1; i++) {
+      const [t0, x0, y0] = CUR[i], [t1, x1, y1] = CUR[i + 1];
+      if (t <= t1) { const u = eio(seg(t, t0, t1)); return [lerp(x0, x1, u), lerp(y0, y1, u)]; }
+    }
+    return CUR[CUR.length - 1].slice(1);
+  }
+
+  function render(t) {
+    // adımlar
+    stepFills.forEach((f, i) => {
+      const [a, b] = STEPS[i];
+      const p = i < 3 ? seg(t, a, b) : seg(t, a, DUR);
+      f.style.width = (t >= a ? p * 100 : 0) + "%";
+      f.parentElement.style.width = (t >= a && t < b ? lerp(34, 120, spring(t - a, 8, 12)) : 34) + "px";
+    });
+    const cur = STEPS.findIndex(([a, b]) => t >= a && t < b);
+    $("stepName").textContent = `0${cur + 1} · ${STEPS[cur][2]}`;
+
+    sceneIn("s1", t, 0.0, 7.0);
+    sceneIn("s2", t, 7.0, 16.0);
+    sceneIn("s3", t, 16.0, 25.0);
+    sceneIn("s4", t, 25.0, 99);
+
+    // --- S1: kadran 0 -> 65, bildirim, çöküş
+    {
+      const rise = eio(seg(t, 0.4, 3.5)) * 65;
+      const crash = eio(seg(t, 3.85, 4.5));
+      const v = rise * (1 - crash);
+      const red = eo(seg(t, 3.75, 4.2));
+      const col = red > 0 ? mixHex("#2EC4B6", "#FF3B30", red) : "#2EC4B6";
+      const arc = $("arc");
+      arc.setAttribute("stroke-dasharray", `${Math.max(v, 0.001)} 100`);
+      arc.style.opacity = clamp(v / 1.5);
+      arc.setAttribute("stroke", col);
+      $("pct").innerHTML = `${Math.round(v)}<small>%</small>`;
+      $("pct").style.color = red > 0.5 ? "#FF3B30" : "#fff";
+      const shake = t > 3.6 && t < 4.3 ? Math.sin(t * 90) * 10 * (1 - seg(t, 3.6, 4.3)) : 0;
+      $("dial").style.transform = `translateX(${shake}px) scale(${1 - 0.04 * Math.sin(Math.PI * seg(t, 3.6, 4.0))})`;
+      $("dialLabel").textContent = red > 0.5 ? "BÖLÜNDÜ" : "DERİN ODAK";
+      $("dialLabel").style.color = red > 0.5 ? "#FF3B30" : "";
+      // bildirim kartı yukarıdan düşer
+      const n = $("notif");
+      const d = spring(t - 3.5, 7, 12);
+      const nOut = eio(seg(t, 6.3, 6.8));
+      n.style.opacity = t > 3.5 ? 1 - nOut : 0;
+      n.style.transform = `translateY(${(1 - d) * -420 - nOut * 60}px) rotate(${(1 - d) * -4}deg)`;
+      const peek = clamp((t - 4.2) / 2.0) * 3;
+      $("peek").style.opacity = eo(seg(t, 4.1, 4.4));
+      $("peek").textContent = `göz atma ${peek.toFixed(1).replace(".", ",")} sn`;
+      $("peek").style.color = peek >= 3 ? "#FF3B30" : "";
+    }
+
+    // --- S2: sayaç 00:00 -> 23:15
+    {
+      const u = seg(t, 7.6, 11.6);
+      const e = 1 - Math.pow(1 - u, 4);
+      const secs = Math.round(e * (23 * 60 + 15));
+      const mm = String(Math.floor(secs / 60)).padStart(2, "0");
+      const ss = String(secs % 60).padStart(2, "0");
+      $("clock").textContent = `${mm}:${ss}`;
+      $("clock").style.color = u >= 1 ? "#F5B700" : "#fff";
+      $("clock").style.textShadow = u >= 1 ? "0 0 40px rgba(245,183,0,.45)" : "none";
+      $("clockBar").firstElementChild.style.width = e * 100 + "%";
+      const st = spring(t - 11.8, 8, 12);
+      $("study").style.opacity = clamp((t - 11.8) / 0.25);
+      $("study").style.transform = `translateY(${(1 - st) * 80}px) scale(${lerp(0.9, 1, clamp(st, 0, 1.2))})`;
+      $("s2tag").style.opacity = eo(seg(t, 12.4, 12.9));
+    }
+
+    // --- S3: iş günü barı
+    {
+      const g = spring(t - 16.6, 6, 9);
+      $("greenFill").style.width = Math.max(0, g) * TW + "px";
+      let n = 0;
+      blocks.forEach(({ b, pin, t0 }) => {
+        const pd = spring(t - t0, 9, 14);
+        pin.style.opacity = clamp((t - t0) / 0.15) * (1 - eo(seg(t, 22.6, 23.0)));
+        pin.style.transform = `translateY(${(1 - pd) * -50}px)`;
+        const s = spring(t - t0 - 0.12, 8, 12);
+        b.style.transform = `scaleX(${Math.max(0, s)})`;
+        if (t > t0 + 0.1) n++;
+      });
+      $("interrupts").textContent = `bölünme ${n}/10`;
+      [["statLost", 22.0], ["statLong", 22.3]].forEach(([id, a]) => {
+        const sp = spring(t - a, 8, 12);
+        $(id).style.opacity = clamp((t - a) / 0.25);
+        $(id).style.transform = `translateY(${(1 - sp) * 90}px)`;
+      });
+      $("need").style.opacity = eo(seg(t, 23.0, 23.4));
+    }
+
+    // --- S4: anahtarlar + imleç
+    {
+      const on1 = 1 - spring(t - CLICKS[0], 10, 15);   // bildirimler: açık -> kapalı
+      const on2 = spring(t - CLICKS[1], 10, 15);       // uçak modu: kapalı -> açık
+      const sw = (id, v) => {
+        const el = $(id);
+        el.querySelector(".knob").style.transform = `translateX(${v * 76}px)`;
+        el.querySelector(".fill").style.opacity = clamp(v);
+      };
+      sw("sw1", t < CLICKS[0] ? 1 : on1);
+      sw("sw2", t < CLICKS[1] ? 0 : on2);
+      $("t1s").textContent = t < CLICKS[0] ? "Açık" : "Kapalı";
+      $("t1s").style.color = t < CLICKS[0] ? "#FF3B30" : "";
+      $("bell").setAttribute("stroke", t < CLICKS[0] ? "#FF3B30" : "#7C8086");
+      $("bellSlash").setAttribute("opacity", t < CLICKS[0] ? 0 : 1);
+      const left = Math.max(0, 90 * 60 - Math.max(0, t - CLICKS[1]) * 1);
+      $("t2s").textContent = t < CLICKS[1] ? "Kapalı" : `Açık · ${String(Math.floor(left / 60)).padStart(2, "0")}:${String(Math.floor(left % 60)).padStart(2, "0")} kaldı`;
+      $("t2s").style.color = t < CLICKS[1] ? "" : "#2EC4B6";
+      $("plane").setAttribute("fill", t < CLICKS[1] ? "#7C8086" : "#2EC4B6");
+      // tıklanan kart hafifçe içeri basılır
+      [["t1", CLICKS[0]], ["t2", CLICKS[1]]].forEach(([id, c]) => {
+        const k = t > c && t < c + 0.5 ? Math.sin(Math.PI * seg(t, c, c + 0.5)) : 0;
+        $(id).style.transform = `scale(${1 - 0.025 * k})`;
+      });
+      const fb = spring(t - 28.3, 8, 12);
+      $("focusBar").style.opacity = clamp((t - 28.3) / 0.25);
+      $("focusBar").style.transform = `translateY(${(1 - fb) * 80}px)`;
+      const fp = eio(seg(t, 28.7, 31.2));
+      $("fTrack").firstElementChild.style.width = fp * 100 + "%";
+      $("focusPct").textContent = `%${Math.round(fp * 100)}`;
+
+      const [cx, cy] = cursorAt(t);
+      const press = CLICKS.some((c) => t > c - 0.05 && t < c + 0.12) ? 0.86 : 1;
+      const cur = $("cursor");
+      cur.style.opacity = clamp((t - 25.0) / 0.3) * (1 - eo(seg(t, 30.4, 30.8)));
+      cur.style.transform = `translate(${cx - 10}px, ${cy - 6}px) scale(${press})`;
+      const ring = $("clickRing");
+      const last = CLICKS.filter((c) => t >= c).pop();
+      if (last !== undefined && t - last < 0.5) {
+        const u = (t - last) / 0.5;
+        ring.style.opacity = 1 - u;
+        ring.style.left = cx + "px"; ring.style.top = cy + "px";
+        ring.style.transform = `scale(${1 + u * 2.4})`;
+      } else ring.style.opacity = 0;
+    }
+
+    applyCaption(t);
+  }
+
+  // oynatma
+  let start = null, raf = 0;
+  function loop(now) {
+    if (start === null) start = now;
+    const t = Math.min(DUR, (now - start) / 1000);
+    render(t);
+    if (t < DUR) raf = requestAnimationFrame(loop);
+  }
+  function play() { cancelAnimationFrame(raf); start = null; raf = requestAnimationFrame(loop); }
+  $("replay").addEventListener("click", play);
+  window.__render = render;
+  const fixed = params.get("t");
+  Promise.race([document.fonts ? document.fonts.ready : Promise.resolve(), new Promise((r) => setTimeout(r, 1500))])
+    .then(() => (fixed !== null ? render(parseFloat(fixed)) : play()));
+})();
+</script>
+</body>
+</html>
